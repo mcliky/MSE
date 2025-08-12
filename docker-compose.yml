@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  mes-api:
+    build: .
+    container_name: mes-api
+    ports:
+      - "8300:8300"
+    environment:
+      # Override these if your ERP / Service Catalog run elsewhere
+      ERP_API_URL: "http://host.docker.internal:8100"
+      CATALOG_API_URL: "http://host.docker.internal:8200"
+    volumes:
+      - ./app:/app/app
+    restart: unless-stopped
