@@ -1,15 +1,25 @@
-version: "3.8"
-
+# docker-compose.yml (MES)
 services:
   mes-api:
     build: .
-    container_name: mes-api
     ports:
       - "8300:8300"
     environment:
-      # Override these if your ERP / Service Catalog run elsewhere
+      DATABASE_URL: "sqlite:////data/mes.db"
+      # If ERP runs in a DIFFERENT compose/project on your host:
       ERP_API_URL: "http://host.docker.internal:8100"
-      CATALOG_API_URL: "http://host.docker.internal:8200"
+      # If ERP runs in the SAME compose network, use:
+      # ERP_API_URL: "http://erp-restapi:8100"
     volumes:
-      - ./app:/app/app
+      - mes_db:/data         # persist DB, avoid Windows write issues
+      - ./app:/app/app       # hot-reload your code
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8300/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     restart: unless-stopped
+
+volumes:
+  mes_db:

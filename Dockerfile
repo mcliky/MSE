@@ -1,24 +1,20 @@
-# ---- Base image ----
+# Dockerfile (MES)
 FROM python:3.11-slim
-
-# System setup
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install deps
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# minimal tools (curl for healthcheck)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Copy source
-COPY app /app/app
+# runtime deps (no local requirements.txt needed)
+RUN pip install --no-cache-dir fastapi "uvicorn[standard]" sqlalchemy httpx pydantic
 
-# Optional: run as non-root
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
-USER appuser
+# writable dir for SQLite
+RUN mkdir -p /data && chmod 777 /data
 
 EXPOSE 8300
 
-# Dev-friendly hot reload (as seen in your logs)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8300", "--reload"]
+HEALTHCHECK --interval=15s --timeout=3s --retries=5 --start-period=5s \
+  CMD curl -fsS http://127.0.0.1:8300/health || exit 1
+
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8300"]
